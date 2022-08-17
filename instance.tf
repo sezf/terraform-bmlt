@@ -251,23 +251,26 @@ EOF
     content_type = "text/x-shellscript"
     content      = <<BOF
 #!/bin/bash
-a2enmod rewrite
-systemctl restart apache2
 mkdir /var/www/${var.domain}
 chown -R $USER:$USER /var/www/${var.domain}
 chmod -R 755 /var/www/${var.domain}
+sed -i 's/^\tOptions Indexes FollowSymLinks/\tOptions FollowSymLinks/' /etc/apache2/apache2.conf
 cat << EOF > /etc/apache2/sites-available/${var.domain}.conf
 <VirtualHost *:80>
     ServerAdmin webmaster@localhost
     ServerName ${var.domain}
     DocumentRoot /var/www/${var.domain}
-    ErrorLog $${APACHE_LOG_DIR}/error.log
-    CustomLog $${APACHE_LOG_DIR}/access.log combined
+    ErrorLog \$${APACHE_LOG_DIR}/error.log
+    CustomLog \$${APACHE_LOG_DIR}/access.log combined
 RewriteEngine on
 RewriteCond %%{SERVER_NAME} =${var.domain}
 RewriteRule ^ https://%%{SERVER_NAME}%%{REQUEST_URI} [END,NE,R=permanent]
 </VirtualHost>
 EOF
+a2ensite ${var.domain}.conf
+a2dissite 000-default.conf
+a2enmod rewrite
+systemctl restart apache2
 
 
 systemctl start mysql.service
