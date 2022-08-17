@@ -306,6 +306,14 @@ wget https://s3.amazonaws.com/archives.bmlt.app/bmlt-root-server/bmlt-root-serve
 unzip bmlt-root-server.zip
 rm -f bmlt-root-server.zip
 mv main_server /var/www/${var.domain}/main_server
+
+
+wget https://github.com/bmlt-enabled/yap/releases/download/4.1.2/yap-4.1.2.zip -O yap.zip
+unzip yap.zip
+rm -f yap.zip
+mv yap-4.1.2 /var/www/${var.domain}/zonal-yap
+
+
 chown -R www-data: /var/www/${var.domain}
 
 BOF
