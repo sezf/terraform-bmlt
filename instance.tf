@@ -251,6 +251,14 @@ EOF
     content_type = "text/x-shellscript"
     content      = <<BOF
 #!/bin/bash
+
+ufw disable
+iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -F
+
+
 mkdir /var/www/${var.domain}
 chown -R $USER:$USER /var/www/${var.domain}
 chmod -R 755 /var/www/${var.domain}
@@ -262,9 +270,12 @@ cat << EOF > /etc/apache2/sites-available/${var.domain}.conf
     DocumentRoot /var/www/${var.domain}
     ErrorLog \$${APACHE_LOG_DIR}/error.log
     CustomLog \$${APACHE_LOG_DIR}/access.log combined
-RewriteEngine on
-RewriteCond %%{SERVER_NAME} =${var.domain}
-RewriteRule ^ https://%%{SERVER_NAME}%%{REQUEST_URI} [END,NE,R=permanent]
+    RewriteEngine on
+    RewriteCond %%{SERVER_NAME} =${var.domain}
+    RewriteRule ^ https://%%{SERVER_NAME}%%{REQUEST_URI} [END,NE,R=permanent]
+    <Directory "/var/www/${var.domain}">
+        AllowOverride All
+    </Directory>
 </VirtualHost>
 EOF
 a2ensite ${var.domain}.conf
@@ -289,14 +300,6 @@ mysql --execute="CREATE USER '${var.yap_mysql_username}'@'localhost' IDENTIFIED 
 mysql --execute="GRANT ALL PRIVILEGES ON yap.* TO '${var.yap_mysql_username}'@'localhost';"
 # flush
 mysql --execute="FLUSH PRIVILEGES;"
-
-
-ufw disable
-iptables -P INPUT ACCEPT
-iptables -P OUTPUT ACCEPT
-iptables -P FORWARD ACCEPT
-iptables -F
-
 BOF
   }
 }
