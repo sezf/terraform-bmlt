@@ -241,6 +241,8 @@ packages:
   - unzip
   - certbot
   - python3-certbot-apache
+  - python3-pip
+  - jq
 EOF
   }
 
@@ -249,6 +251,11 @@ EOF
     content      = <<BOF
 #!/bin/bash
 
+
+pip3 install oci-cli
+
+
+# disable firewall
 ufw disable
 iptables -P INPUT ACCEPT
 iptables -P OUTPUT ACCEPT
@@ -256,6 +263,7 @@ iptables -P FORWARD ACCEPT
 iptables -F
 
 
+# configure apache
 mkdir /var/www/${var.domain}
 chown -R $USER:$USER /var/www/${var.domain}
 chmod -R 755 /var/www/${var.domain}
@@ -281,8 +289,9 @@ a2enmod rewrite
 systemctl restart apache2
 
 
+# configure mysql
 systemctl start mysql.service
-# secure mysql
+# secure
 mysql --execute="ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';"
 mysql_secure_installation --password=password --use-default
 mysql --user=root --password=password --execute="ALTER USER 'root'@'localhost' IDENTIFIED WITH auth_socket;"
@@ -299,12 +308,71 @@ mysql --execute="GRANT ALL PRIVILEGES ON yap.* TO '${var.yap_mysql_username}'@'l
 mysql --execute="FLUSH PRIVILEGES;"
 
 
+# setup db backup cronjob
+cat << EOF > /etc/cron.weekly/bmlt-db-backup
+#!/usr/bin/env bash
+set -o xtrace
+set -e
+
+export OCI_CLI_AUTH=instance_principal
+bucket_name=${oci_objectstorage_bucket.bucket.name}
+bmlt_filename_prefix=bmlt-
+yap_filename_prefix=yap-
+bmlt_filename=/tmp/"\$${bmlt_filename_prefix}\$(date +'%Y-%m-%d').sql.gz"
+yap_filename=/tmp/"\$${yap_filename_prefix}\$(date +'%Y-%m-%d').sql.gz"
+
+
+function cleanup() {
+  rm -f \$${bmlt_filename}
+  rm -f \$${yap_filename}
+}
+
+dump() {
+  local db=\$${1}
+  local filename=\$${2}
+  mysqldump \$${db} | gzip > \$${filename}
+}
+
+upload() {
+  local filename=\$${1}
+  oci os object put --bucket-name \$${bucket_name} --file \$${filename} --force
+}
+
+prune() {
+  local prefix=\$${1}
+  local objects="\$(oci os object list --bucket-name \$${bucket_name} --prefix=\$${prefix} | jq -r '.[] | sort_by(".name") | reverse | .[].name')"
+  local i=0
+  echo "\$${objects}" | while read object; do
+    echo \$${i}
+    if [[ "\$${i}" -gt 3 ]]; then
+      echo "deleting \$${object}"
+      oci os object delete --bucket-name \$${bucket_name} --object-name=\$${object} --force
+    fi
+    i=\$((i+1))
+  done
+}
+
+trap cleanup EXIT
+
+dump bmlt \$${bmlt_filename}
+dump yap \$${yap_filename}
+upload \$${bmlt_filename}
+upload \$${yap_filename}
+prune \$${bmlt_filename_prefix}
+prune \$${yap_filename_prefix}
+EOF
+
+chmod +x /etc/cron.weekly/bmlt-db-backup
+
+
+# install root server
 wget https://s3.amazonaws.com/archives.bmlt.app/bmlt-root-server/bmlt-root-server-build1975-3a8113b086b799cddf25c5090407ff16e4b07d85.zip -O bmlt-root-server.zip
 unzip bmlt-root-server.zip
 rm -f bmlt-root-server.zip
 mv main_server /var/www/${var.domain}/main_server
 
 
+# install yap
 wget https://github.com/bmlt-enabled/yap/releases/download/4.1.2/yap-4.1.2.zip -O yap.zip
 unzip yap.zip
 rm -f yap.zip
