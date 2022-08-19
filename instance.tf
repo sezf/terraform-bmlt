@@ -5,7 +5,7 @@ resource "oci_core_instance" "root_server" {
   shape               = "VM.Standard.A1.Flex" # VM.Standard.E2.1.Micro If Using AMD
 
   create_vnic_details {
-    assign_public_ip = false
+    assign_public_ip = true
     display_name     = "eth01"
     hostname_label   = "root-server"
     nsg_ids          = [oci_core_network_security_group.root_server.id]
@@ -54,13 +54,6 @@ resource "oci_objectstorage_bucket" "bucket" {
   name           = "root-server-backup"
   namespace      = data.oci_objectstorage_namespace.root_server.namespace
   access_type    = "NoPublicAccess"
-}
-
-resource "oci_core_public_ip" "root_server" {
-  compartment_id = data.oci_identity_compartment.default.id
-  display_name   = "root-server-${terraform.workspace}"
-  lifetime       = "EPHEMERAL"
-  private_ip_id  = data.oci_core_private_ips.root_server.private_ips[0]["id"]
 }
 
 data "oci_objectstorage_namespace" "root_server" {
@@ -226,18 +219,22 @@ data "cloudinit_config" "root_server" {
 
 package_update: true
 package_upgrade: true
+apt:
+  sources:
+    ondrej/php:
+      source: "ppa:ondrej/php"
 packages:
   - apt-transport-https
   - ca-certificates
   - apache2
-  - php
-  - php-curl
-  - php-dom
-  - php-mbstring
-  - php-mysql
-  - php-gd
-  - php-xml
-  - php-zip
+  - php8.0
+  - php8.0-curl
+  - php8.0-dom
+  - php8.0-mbstring
+  - php8.0-mysql
+  - php8.0-gd
+  - php8.0-xml
+  - php8.0-zip
   - mysql-client
   - mysql-server
   - libapache2-mod-php
