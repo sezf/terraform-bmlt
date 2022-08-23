@@ -223,22 +223,18 @@ data "cloudinit_config" "root_server" {
 
 package_update: true
 package_upgrade: true
-apt:
-  sources:
-    ondrej/php:
-      source: "ppa:ondrej/php"
 packages:
   - apt-transport-https
   - ca-certificates
   - apache2
-  - php8.0
-  - php8.0-curl
-  - php8.0-dom
-  - php8.0-mbstring
-  - php8.0-mysql
-  - php8.0-gd
-  - php8.0-xml
-  - php8.0-zip
+  - php
+  - php-curl
+  - php-dom
+  - php-mbstring
+  - php-mysql
+  - php-gd
+  - php-xml
+  - php-zip
   - mysql-client
   - mysql-server
   - libapache2-mod-php
