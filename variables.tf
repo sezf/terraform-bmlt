@@ -1,6 +1,6 @@
-variable "ssh_public_key" {
-  type        = string
-  description = "The SSH key used to access the server."
+variable "ssh_public_keys" {
+  type        = map(string)
+  description = "The SSH keys used to access the server."
 }
 
 variable "region" {
@@ -17,7 +17,7 @@ variable "tenancy_ocid" {
 variable "config_file_profile" {
   type        = string
   description = "The named config file profile."
-  default     = "DEFAULT"
+  default     = "SEZF"
 }
 
 variable "vpc_cidr_block" {
@@ -29,7 +29,7 @@ variable "vpc_cidr_block" {
 variable "domain" {
   type        = string
   description = "Website domain"
-  default     = "bmlt.jrb.lol"
+  default     = "tlmb.sezf.org"
 }
 
 variable "root_server_mysql_username" {

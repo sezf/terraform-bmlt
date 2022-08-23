@@ -13,7 +13,11 @@ resource "oci_core_instance" "root_server" {
   }
 
   metadata = {
-    ssh_authorized_keys = var.ssh_public_key
+    ssh_authorized_keys = <<EOT
+%{for key, val in var.ssh_public_keys~}
+${val}
+%{endfor~}
+EOT
     user_data           = data.cloudinit_config.root_server.rendered
   }
 
