@@ -32,9 +32,9 @@ EOT
     memory_in_gbs = 12
   }
 
-  #  lifecycle {
-  #    ignore_changes = [metadata["user_data"]]
-  #  }
+   lifecycle {
+     ignore_changes = [metadata["user_data"]]
+   }
 }
 
 resource "oci_core_public_ip" "root_server" {
