@@ -31,6 +31,10 @@ EOT
     ocpus         = 2
     memory_in_gbs = 12
   }
+
+  #  lifecycle {
+  #    ignore_changes = [metadata["user_data"]]
+  #  }
 }
 
 resource "oci_identity_dynamic_group" "backup" {
@@ -223,6 +227,11 @@ data "cloudinit_config" "root_server" {
 
 package_update: true
 package_upgrade: true
+write_files:
+  - encoding: b64
+    content: "${local.db_backup_script}"
+    path: /etc/cron.weekly/bmlt-db-backup
+    permissions: '0755'
 packages:
   - apt-transport-https
   - ca-certificates
@@ -307,64 +316,6 @@ mysql --execute="GRANT ALL PRIVILEGES ON yap.* TO '${var.yap_mysql_username}'@'l
 # flush
 mysql --execute="FLUSH PRIVILEGES;"
 
-
-# setup db backup cronjob
-cat << EOF > /etc/cron.weekly/bmlt-db-backup
-#!/usr/bin/env bash
-set -o xtrace
-set -e
-
-export OCI_CLI_AUTH=instance_principal
-bucket_name=${oci_objectstorage_bucket.bucket.name}
-bmlt_filename_prefix=bmlt-
-yap_filename_prefix=yap-
-bmlt_filename=/tmp/"\$${bmlt_filename_prefix}\$(date +'%Y-%m-%d').sql.gz"
-yap_filename=/tmp/"\$${yap_filename_prefix}\$(date +'%Y-%m-%d').sql.gz"
-
-
-function cleanup() {
-  rm -f \$${bmlt_filename}
-  rm -f \$${yap_filename}
-}
-
-dump() {
-  local db=\$${1}
-  local filename=\$${2}
-  mysqldump \$${db} | gzip > \$${filename}
-}
-
-upload() {
-  local filename=\$${1}
-  oci os object put --bucket-name \$${bucket_name} --file \$${filename} --force
-}
-
-prune() {
-  local prefix=\$${1}
-  local objects="\$(oci os object list --bucket-name \$${bucket_name} --prefix=\$${prefix} | jq -r '.[] | sort_by(".name") | reverse | .[].name')"
-  local i=0
-  echo "\$${objects}" | while read object; do
-    echo \$${i}
-    if [[ "\$${i}" -gt 3 ]]; then
-      echo "deleting \$${object}"
-      oci os object delete --bucket-name \$${bucket_name} --object-name=\$${object} --force
-    fi
-    i=\$((i+1))
-  done
-}
-
-trap cleanup EXIT
-
-dump bmlt \$${bmlt_filename}
-dump yap \$${yap_filename}
-upload \$${bmlt_filename}
-upload \$${yap_filename}
-prune \$${bmlt_filename_prefix}
-prune \$${yap_filename_prefix}
-EOF
-
-chmod +x /etc/cron.weekly/bmlt-db-backup
-
-
 # install root server
 wget https://s3.amazonaws.com/archives.bmlt.app/bmlt-root-server/bmlt-root-server-build1975-3a8113b086b799cddf25c5090407ff16e4b07d85.zip -O bmlt-root-server.zip
 unzip bmlt-root-server.zip
@@ -396,4 +347,5 @@ data "http" "ip" {
 locals {
   myip                = "${jsondecode(data.http.ip.response_body).ip_addr}/32"
   availability_domain = [for i in data.oci_identity_availability_domains.root_server.availability_domains : i if length(regexall("US-ASHBURN-AD-3", i.name)) > 0][0].name
+  db_backup_script    = base64encode(templatefile("${path.root}/templates/bmlt-db-backup.tpl", { bucket = oci_objectstorage_bucket.bucket.name }))
 }
