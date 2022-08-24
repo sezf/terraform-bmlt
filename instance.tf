@@ -2,10 +2,10 @@ resource "oci_core_instance" "root_server" {
   availability_domain = oci_core_subnet.root_server.availability_domain
   compartment_id      = data.oci_identity_compartment.default.id
   display_name        = "root-server-${terraform.workspace}"
-  shape               = "VM.Standard.A1.Flex" # VM.Standard.E2.1.Micro If Using AMD
+  shape               = "VM.Standard.A1.Flex"
 
   create_vnic_details {
-    assign_public_ip = true
+    assign_public_ip = false
     display_name     = "eth01"
     hostname_label   = "root-server"
     nsg_ids          = [oci_core_network_security_group.root_server.id]
@@ -35,6 +35,13 @@ EOT
   #  lifecycle {
   #    ignore_changes = [metadata["user_data"]]
   #  }
+}
+
+resource "oci_core_public_ip" "root_server" {
+  compartment_id = data.oci_identity_compartment.default.id
+  display_name   = "root-server-${terraform.workspace}"
+  lifetime       = "RESERVED"
+  private_ip_id  = data.oci_core_private_ips.root_server.private_ips[0]["id"]
 }
 
 resource "oci_identity_dynamic_group" "backup" {
