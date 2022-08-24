@@ -1,5 +1,6 @@
 srcip=bmlt.sezf.org
-destip=tlmb.sezf.org
+destip=129.80.254.82
+destdomain=tlmb.sezf.org
 
 scp makebackups.sh root@${srcip}:makebackups.sh
 ssh root@${srcip} sudo chmod +x /root/makebackups.sh
@@ -22,7 +23,7 @@ scp config.php ubuntu@${destip}:config.php
 ssh ubuntu@${destip} sudo /home/ubuntu/restorebackups.sh
 ssh ubuntu@${destip} sudo rm -f /home/ubuntu/restorebackups.sh
 scp recordings.tar.gz ubuntu@${destip}:recordings.tar.gz
-ssh ubuntu@${destip} sudo mv /home/ubuntu/recordings.tar.gz /var/www/${destip}/
-ssh ubuntu@${destip} sudo tar -xzvf /var/www/${destip}/recordings.tar.gz -C /var/www/${destip}
-ssh ubuntu@${destip} sudo chown www-data: /var/www/${destip}/recordings
-ssh ubuntu@${destip} sudo rm /var/www/${destip}/recordings.tar.gz
+ssh ubuntu@${destip} sudo mv /home/ubuntu/recordings.tar.gz /var/www/${destdomain}/
+ssh ubuntu@${destip} sudo tar -xzvf /var/www/${destdomain}/recordings.tar.gz -C /var/www/${destdomain}
+ssh ubuntu@${destip} sudo chown www-data: /var/www/${destdomain}/recordings
+ssh ubuntu@${destip} sudo rm /var/www/${destdomain}/recordings.tar.gz
