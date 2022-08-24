@@ -1,4 +1,5 @@
-srcip=bmlt.sezf.org
+srcip=159.223.170.0
+srcdomain=bmlt.sezf.org
 destip=129.80.254.82
 destdomain=tlmb.sezf.org
 
@@ -8,9 +9,9 @@ ssh root@${srcip} /root/makebackups.sh
 ssh root@${srcip} sudo rm -f /root/makebackups.sh
 scp root@${srcip}:/root/bmlt.gz .
 scp root@${srcip}:/root/yap.gz .
-scp root@${srcip}:/var/www/${srcip}/auto-config.inc.php .
-scp root@${srcip}:/var/www/${srcip}/zonal-yap/config.php .
-ssh root@${srcip} tar -czvf recordings.tar.gz -C /var/www/${srcip} recordings
+scp root@${srcip}:/var/www/${srcdomain}/auto-config.inc.php .
+scp root@${srcip}:/var/www/${srcdomain}/zonal-yap/config.php .
+ssh root@${srcip} tar -czvf recordings.tar.gz -C /var/www/${srcdomain} recordings
 scp root@${srcip}:/root/recordings.tar.gz .
 ssh root@${srcip} rm /root/recordings.tar.gz
 
