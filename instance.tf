@@ -150,6 +150,10 @@ resource "oci_core_network_security_group_security_rule" "root_server_ingress_ss
       min = 22
     }
   }
+
+  lifecycle {
+    ignore_changes = [source]
+  }
 }
 
 resource "oci_core_network_security_group_security_rule" "root_server_ingress_443_rule" {
@@ -331,10 +335,10 @@ mv main_server /var/www/${var.domain}/main_server
 
 
 # install yap
-wget https://github.com/bmlt-enabled/yap/releases/download/4.1.2/yap-4.1.2.zip -O yap.zip
+wget https://s3.amazonaws.com/archives.bmlt.app/yap/yap-125-4aeb4ca6fbba551fb7b1b5e5f605e1551e1e0a7d.zip -O yap.zip
 unzip yap.zip
 rm -f yap.zip
-mv yap-4.1.2 /var/www/${var.domain}/zonal-yap
+mv yap-125-4aeb4ca6fbba551fb7b1b5e5f605e1551e1e0a7d /var/www/${var.domain}/zonal-yap
 
 
 chown -R www-data: /var/www/${var.domain}

@@ -28,3 +28,5 @@ ssh ubuntu@${destip} sudo mv /home/ubuntu/recordings.tar.gz /var/www/${destdomai
 ssh ubuntu@${destip} sudo tar -xzvf /var/www/${destdomain}/recordings.tar.gz -C /var/www/${destdomain}
 ssh ubuntu@${destip} sudo chown www-data: /var/www/${destdomain}/recordings
 ssh ubuntu@${destip} sudo rm /var/www/${destdomain}/recordings.tar.gz
+
+rm -f auto-config.inc.php bmlt.gz config.php recordings.tar.gz yap.gz
