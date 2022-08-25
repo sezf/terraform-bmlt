@@ -32,9 +32,9 @@ EOT
     memory_in_gbs = 12
   }
 
-  #  lifecycle {
-  #    ignore_changes = [metadata["user_data"]]
-  #  }
+  lifecycle {
+    ignore_changes = [metadata["user_data"]]
+  }
 }
 
 resource "oci_core_public_ip" "root_server" {
@@ -243,6 +243,10 @@ write_files:
     content: "${local.db_backup_script}"
     path: /etc/cron.weekly/bmlt-db-backup
     permissions: '0755'
+  - encoding: b64
+    content: "${local.apache_conf}"
+    path: /etc/apache2/sites-available/${var.domain}.conf
+    permissions: '0644'
 packages:
   - apt-transport-https
   - ca-certificates
@@ -288,21 +292,6 @@ mkdir /var/www/${var.domain}
 chown -R $USER:$USER /var/www/${var.domain}
 chmod -R 755 /var/www/${var.domain}
 sed -i 's/^\tOptions Indexes FollowSymLinks/\tOptions FollowSymLinks/' /etc/apache2/apache2.conf
-cat << EOF > /etc/apache2/sites-available/${var.domain}.conf
-<VirtualHost *:80>
-    ServerAdmin webmaster@localhost
-    ServerName ${var.domain}
-    DocumentRoot /var/www/${var.domain}
-    ErrorLog \$${APACHE_LOG_DIR}/error.log
-    CustomLog \$${APACHE_LOG_DIR}/access.log combined
-    RewriteEngine on
-    RewriteCond %%{SERVER_NAME} =${var.domain}
-    RewriteRule ^ https://%%{SERVER_NAME}%%{REQUEST_URI} [END,NE,R=permanent]
-    <Directory "/var/www/${var.domain}">
-        AllowOverride All
-    </Directory>
-</VirtualHost>
-EOF
 a2ensite ${var.domain}.conf
 a2dissite 000-default.conf
 a2enmod rewrite
@@ -359,4 +348,5 @@ locals {
   myip                = "${jsondecode(data.http.ip.response_body).ip_addr}/32"
   availability_domain = [for i in data.oci_identity_availability_domains.root_server.availability_domains : i if length(regexall("US-ASHBURN-AD-3", i.name)) > 0][0].name
   db_backup_script    = base64encode(templatefile("${path.root}/templates/bmlt-db-backup.tpl", { bucket = oci_objectstorage_bucket.bucket.name }))
+  apache_conf         = base64encode(templatefile("${path.root}/templates/apache.conf.tpl", { domain = var.domain }))
 }
