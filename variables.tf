@@ -29,7 +29,7 @@ variable "vpc_cidr_block" {
 variable "domain" {
   type        = string
   description = "Website domain"
-  default     = "tlmb.sezf.org"
+  default     = "gyro.sezf.org"
 }
 
 variable "root_server_mysql_username" {
