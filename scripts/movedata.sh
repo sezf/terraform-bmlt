@@ -1,7 +1,7 @@
 srcip=159.223.170.0
 srcdomain=bmlt.sezf.org
 destip=129.80.254.82
-destdomain=tlmb.sezf.org
+destdomain=gyro.sezf.org
 
 scp makebackups.sh root@${srcip}:makebackups.sh
 ssh root@${srcip} sudo chmod +x /root/makebackups.sh

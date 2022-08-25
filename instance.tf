@@ -32,9 +32,9 @@ EOT
     memory_in_gbs = 12
   }
 
-  lifecycle {
-    ignore_changes = [metadata["user_data"]]
-  }
+  #  lifecycle {
+  #    ignore_changes = [metadata["user_data"]]
+  #  }
 }
 
 resource "oci_core_public_ip" "root_server" {
@@ -324,10 +324,10 @@ mv main_server /var/www/${var.domain}/main_server
 
 
 # install yap
-wget https://s3.amazonaws.com/archives.bmlt.app/yap/yap-125-4aeb4ca6fbba551fb7b1b5e5f605e1551e1e0a7d.zip -O yap.zip
+wget https://s3.amazonaws.com/archives.bmlt.app/yap/yap-126-1b4820673861cfb5caa473401ddeb5e5a054b636.zip -O yap.zip
 unzip yap.zip
 rm -f yap.zip
-mv yap-125-4aeb4ca6fbba551fb7b1b5e5f605e1551e1e0a7d /var/www/${var.domain}/zonal-yap
+mv yap-126-1b4820673861cfb5caa473401ddeb5e5a054b636 /var/www/${var.domain}/zonal-yap
 
 
 chown -R www-data: /var/www/${var.domain}
