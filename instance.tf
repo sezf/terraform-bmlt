@@ -317,7 +317,7 @@ mysql --execute="GRANT ALL PRIVILEGES ON yap.* TO '${var.yap_mysql_username}'@'l
 mysql --execute="FLUSH PRIVILEGES;"
 
 # install root server
-wget https://s3.amazonaws.com/archives.bmlt.app/bmlt-root-server/bmlt-root-server-build1978-3c85ac80c31627c956404bc51e44a1a76d9efc3c.zip -O bmlt-root-server.zip
+wget https://github.com/bmlt-enabled/bmlt-root-server/releases/download/2.16.5/bmlt-root-server.zip -O bmlt-root-server.zip
 unzip bmlt-root-server.zip
 rm -f bmlt-root-server.zip
 mv main_server /var/www/${var.domain}/main_server
