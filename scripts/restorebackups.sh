@@ -1,4 +1,4 @@
-domain=bmlt.sezf.org
+domain=gyro.sezf.org
 
 rm -f bmlt
 mysql --execute='DROP DATABASE IF EXISTS bmlt; CREATE DATABASE bmlt;'

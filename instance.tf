@@ -70,10 +70,10 @@ EOT
     ocpus         = 2
     memory_in_gbs = 12
   }
-
-  lifecycle {
-    ignore_changes = [metadata["user_data"]]
-  }
+  #
+  #  lifecycle {
+  #    ignore_changes = [metadata["user_data"]]
+  #  }
 }
 
 resource "oci_core_public_ip" "root_server" {
@@ -388,8 +388,8 @@ package_update: true
 package_upgrade: true
 write_files:
   - encoding: b64
-    content: "${local.apache_conf}"
-    path: /etc/apache2/sites-available/gyro.bmlt.org.conf
+    content: "${local.apache_conf_gyro}"
+    path: /etc/apache2/sites-available/gyro.sezf.org.conf
     permissions: '0644'
 packages:
   - apt-transport-https
@@ -432,11 +432,11 @@ iptables -F
 
 
 # configure apache
-mkdir /var/www/gyro.bmlt.org
-chown -R $USER:$USER /var/www/gyro.bmlt.org
-chmod -R 755 /var/www/gyro.bmlt.org
+mkdir /var/www/gyro.sezf.org
+chown -R $USER:$USER /var/www/gyro.sezf.org
+chmod -R 755 /var/www/gyro.sezf.org
 sed -i 's/^\tOptions Indexes FollowSymLinks/\tOptions FollowSymLinks/' /etc/apache2/apache2.conf
-a2ensite gyro.bmlt.org.conf
+a2ensite gyro.sezf.org.conf
 a2dissite 000-default.conf
 a2enmod rewrite
 systemctl restart apache2
@@ -464,17 +464,17 @@ mysql --execute="FLUSH PRIVILEGES;"
 wget https://github.com/bmlt-enabled/bmlt-root-server/releases/download/2.16.5/bmlt-root-server.zip -O bmlt-root-server.zip
 unzip bmlt-root-server.zip
 rm -f bmlt-root-server.zip
-mv main_server /var/www/${var.domain}/main_server
+mv main_server /var/www/gyro.sezf.org/main_server
 
 
 # install yap
 wget https://s3.amazonaws.com/archives.bmlt.app/yap/yap-126-1b4820673861cfb5caa473401ddeb5e5a054b636.zip -O yap.zip
 unzip yap.zip
 rm -f yap.zip
-mv yap-126-1b4820673861cfb5caa473401ddeb5e5a054b636 /var/www/gyro.bmlt.org/zonal-yap
+mv yap-126-1b4820673861cfb5caa473401ddeb5e5a054b636 /var/www/gyro.sezf.org/zonal-yap
 
 
-chown -R www-data: /var/www/gyro.bmlt.org
+chown -R www-data: /var/www/gyro.sezf.org
 
 BOF
   }
@@ -493,5 +493,5 @@ locals {
   availability_domain = [for i in data.oci_identity_availability_domains.root_server.availability_domains : i if length(regexall("US-ASHBURN-AD-3", i.name)) > 0][0].name
   db_backup_script    = base64encode(templatefile("${path.root}/templates/bmlt-db-backup.tpl", { bucket = oci_objectstorage_bucket.bucket.name }))
   apache_conf         = base64encode(templatefile("${path.root}/templates/apache.conf.tpl", { domain = var.domain }))
-  apache_conf_gyro    = base64encode(templatefile("${path.root}/templates/apache.conf.tpl", { domain = "gyro.bmlt.org" }))
+  apache_conf_gyro    = base64encode(templatefile("${path.root}/templates/apache.conf.tpl", { domain = "gyro.sezf.org" }))
 }
