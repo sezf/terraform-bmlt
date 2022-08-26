@@ -32,9 +32,48 @@ EOT
     memory_in_gbs = 12
   }
 
-   lifecycle {
-     ignore_changes = [metadata["user_data"]]
-   }
+  lifecycle {
+    ignore_changes = [metadata["user_data"], source_details["source_id"]]
+  }
+}
+
+resource "oci_core_instance" "gyro_server" {
+  availability_domain = oci_core_subnet.root_server.availability_domain
+  compartment_id      = data.oci_identity_compartment.default.id
+  display_name        = "gyro-server-${terraform.workspace}"
+  shape               = "VM.Standard.A1.Flex"
+
+  create_vnic_details {
+    assign_public_ip = true
+    display_name     = "eth01"
+    hostname_label   = "gyro-server"
+    nsg_ids          = [oci_core_network_security_group.root_server.id]
+    subnet_id        = oci_core_subnet.root_server.id
+  }
+
+  metadata = {
+    ssh_authorized_keys = <<EOT
+%{for key, val in var.ssh_public_keys~}
+${val}
+%{endfor~}
+EOT
+    user_data           = data.cloudinit_config.gyro_server.rendered
+  }
+
+  source_details {
+    source_type             = "image"
+    source_id               = data.oci_core_images.ubuntu_jammy_arm.images.0.id
+    boot_volume_size_in_gbs = 100
+  }
+
+  shape_config {
+    ocpus         = 2
+    memory_in_gbs = 12
+  }
+
+  lifecycle {
+    ignore_changes = [metadata["user_data"]]
+  }
 }
 
 resource "oci_core_public_ip" "root_server" {
@@ -336,6 +375,111 @@ BOF
   }
 }
 
+data "cloudinit_config" "gyro_server" {
+  gzip          = true
+  base64_encode = true
+
+  part {
+    content_type = "text/cloud-config"
+    content      = <<EOF
+#cloud-config
+
+package_update: true
+package_upgrade: true
+write_files:
+  - encoding: b64
+    content: "${local.apache_conf}"
+    path: /etc/apache2/sites-available/gyro.bmlt.org.conf
+    permissions: '0644'
+packages:
+  - apt-transport-https
+  - ca-certificates
+  - apache2
+  - php
+  - php-curl
+  - php-dom
+  - php-mbstring
+  - php-mysql
+  - php-gd
+  - php-xml
+  - php-zip
+  - mysql-client
+  - mysql-server
+  - libapache2-mod-php
+  - unzip
+  - certbot
+  - python3-certbot-apache
+  - python3-pip
+  - jq
+EOF
+  }
+
+  part {
+    content_type = "text/x-shellscript"
+    content      = <<BOF
+#!/bin/bash
+
+
+pip3 install oci-cli
+
+
+# disable firewall
+ufw disable
+iptables -P INPUT ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -F
+
+
+# configure apache
+mkdir /var/www/gyro.bmlt.org
+chown -R $USER:$USER /var/www/gyro.bmlt.org
+chmod -R 755 /var/www/gyro.bmlt.org
+sed -i 's/^\tOptions Indexes FollowSymLinks/\tOptions FollowSymLinks/' /etc/apache2/apache2.conf
+a2ensite gyro.bmlt.org.conf
+a2dissite 000-default.conf
+a2enmod rewrite
+systemctl restart apache2
+
+
+# configure mysql
+systemctl start mysql.service
+# secure
+mysql --execute="ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';"
+mysql_secure_installation --password=password --use-default
+mysql --user=root --password=password --execute="ALTER USER 'root'@'localhost' IDENTIFIED WITH auth_socket;"
+mysql --execute="UNINSTALL COMPONENT 'file://component_validate_password';"
+# root server db
+mysql --execute="CREATE DATABASE bmlt;"
+mysql --execute="CREATE USER '${var.root_server_mysql_username}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${var.root_server_mysql_password}';"
+mysql --execute="GRANT ALL PRIVILEGES ON bmlt.* TO '${var.root_server_mysql_username}'@'localhost';"
+# yap db
+mysql --execute="CREATE DATABASE yap;"
+mysql --execute="CREATE USER '${var.yap_mysql_username}'@'localhost' IDENTIFIED WITH mysql_native_password BY '${var.yap_mysql_password}';"
+mysql --execute="GRANT ALL PRIVILEGES ON yap.* TO '${var.yap_mysql_username}'@'localhost';"
+# flush
+mysql --execute="FLUSH PRIVILEGES;"
+
+# install root server
+wget https://github.com/bmlt-enabled/bmlt-root-server/releases/download/2.16.5/bmlt-root-server.zip -O bmlt-root-server.zip
+unzip bmlt-root-server.zip
+rm -f bmlt-root-server.zip
+mv main_server /var/www/${var.domain}/main_server
+
+
+# install yap
+wget https://s3.amazonaws.com/archives.bmlt.app/yap/yap-126-1b4820673861cfb5caa473401ddeb5e5a054b636.zip -O yap.zip
+unzip yap.zip
+rm -f yap.zip
+mv yap-126-1b4820673861cfb5caa473401ddeb5e5a054b636 /var/www/gyro.bmlt.org/zonal-yap
+
+
+chown -R www-data: /var/www/gyro.bmlt.org
+
+BOF
+  }
+}
+
 data "http" "ip" {
   url = "https://ifconfig.me/all.json"
 
@@ -349,4 +493,5 @@ locals {
   availability_domain = [for i in data.oci_identity_availability_domains.root_server.availability_domains : i if length(regexall("US-ASHBURN-AD-3", i.name)) > 0][0].name
   db_backup_script    = base64encode(templatefile("${path.root}/templates/bmlt-db-backup.tpl", { bucket = oci_objectstorage_bucket.bucket.name }))
   apache_conf         = base64encode(templatefile("${path.root}/templates/apache.conf.tpl", { domain = var.domain }))
+  apache_conf_gyro    = base64encode(templatefile("${path.root}/templates/apache.conf.tpl", { domain = "gyro.bmlt.org" }))
 }

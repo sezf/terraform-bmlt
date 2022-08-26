@@ -5,3 +5,7 @@ output "root_server_instance_info" {
     private_ip = oci_core_instance.root_server.private_ip
   }
 }
+
+output "gyro_public_ip" {
+  value = oci_core_instance.gyro_server.public_ip
+}
