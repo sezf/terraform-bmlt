@@ -1,6 +1,6 @@
 srcip=159.223.170.0
 srcdomain=bmlt.sezf.org
-destip=150.136.40.31
+destip=150.136.211.114
 destdomain=gyro.sezf.org
 
 scp makebackups.sh root@${srcip}:makebackups.sh
